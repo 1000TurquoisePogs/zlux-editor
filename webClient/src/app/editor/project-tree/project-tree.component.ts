@@ -50,14 +50,18 @@ export class ProjectTreeComponent implements OnInit {
     },
     getChildren: (node: TreeNode) => {
       if (node.data.isDataset) {
-        let requestUrl = ZoweZLUX.uriBroker.datasetMetadataUri(node.data.path.trim(), undefined, undefined, true);
-        return this.httpService.get(requestUrl).toPromise().then((file: any) => {
-          let struct = this.dataAdapter.convertDatasetMemberList(file);
-          return struct.map(f => {
-            f.parent = node.data;
-            return f;
+        if (ZoweZLUX.environmentManager.isHostZOS()) {
+          let requestUrl = ZoweZLUX.uriBroker.datasetMetadataUri(node.data.path.trim(), undefined, undefined, true);
+          return this.httpService.get(requestUrl).toPromise().then((file: any) => {
+            let struct = this.dataAdapter.convertDatasetMemberList(file);
+            return struct.map(f => {
+              f.parent = node.data;
+              return f;
+            });
           });
-        });
+        } else {
+          throw new Error(`Cannot work with datasets because Zowe environment not on z/OS`);
+        }
       } else {
         // let requestUrl: string = this.utils.formatUrl(ENDPOINTS.projectFile, { name: node.data.name });
         // convert path to adjust url. If path is start with '/' then remove it.
@@ -127,19 +131,25 @@ export class ProjectTreeComponent implements OnInit {
               this.editorControl.initProjectContext(this.utils.getFolderName(dirName), this.nodes);
             }, e => {
               let error = e.json().error;
-              this.snackBarService.open(`Directory ${dirName} is not exist!`, 'Close', { duration: 2000, panelClass: 'center' });
+              this.snackBarService.open(`Directory ${dirName} does not exist!`,
+                                        'Close', { duration: 2000, panelClass: 'center' });
             });
         } else {
           // dataset
-          let requestUrl = ZoweZLUX.uriBroker.datasetMetadataUri(dirName, 'true');
-          this.httpService.get(requestUrl)
-            .subscribe((response: any) => {
-              this.nodes = this.dataAdapter.convertDatasetList(response);
-              this.editorControl.setProjectNode(this.nodes);
-              this.editorControl.initProjectContext(dirName, this.nodes);
-            }, e => {
-              // TODO
-            });
+          if (ZoweZLUX.environmentManager.isHostZOS()) {
+            let requestUrl = ZoweZLUX.uriBroker.datasetMetadataUri(dirName, 'true');
+            this.httpService.get(requestUrl)
+              .subscribe((response: any) => {
+                this.nodes = this.dataAdapter.convertDatasetList(response);
+                this.editorControl.setProjectNode(this.nodes);
+                this.editorControl.initProjectContext(dirName, this.nodes);
+              }, e => {
+                // TODO
+              });
+          } else {
+            this.snackBarService.open(`Directory ${dirName} does not exist!`,
+                                      'Close', { duration: 2000, panelClass: 'center' });
+          }
         }
       }
     });

@@ -76,8 +76,14 @@ export class MonacoService {
 
       if (reload) {
         if (fileNode.model.isDataset) {
-          requestUrl = ZoweZLUX.uriBroker.datasetContentsUri(filePath);
-          _observable = this.http.get(requestUrl).map((res: any) => this.dataAdapter.convertDatasetContent(res._body));
+          if (ZoweZLUX.environmentManager.isHostZOS()) {
+            requestUrl = ZoweZLUX.uriBroker.datasetContentsUri(filePath);
+            _observable = this.http.get(requestUrl).map((res: any) =>
+                                                        this.dataAdapter.convertDatasetContent(res._body));
+          } else {
+            console.warn(`Cannot work with datasets because Zowe environment not on z/OS`);
+            return;
+          }
         } else {
           requestUrl = ZoweZLUX.uriBroker.unixFileUri('contents', filePath+'/'+fileNode.model.fileName);
           _observable = this.http.get(requestUrl).map((res: any) => this.dataAdapter.convertFileContent(res._body));
