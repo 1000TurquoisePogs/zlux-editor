@@ -8,7 +8,7 @@
   
   Copyright Contributors to the Zowe Project.
 */
-import { Component, OnInit, ViewChild, Inject } from '@angular/core';
+import { Component, OnInit, ViewChild, Inject, ChangeDetectorRef } from '@angular/core';
 import { Response } from '@angular/http';
 import { MatDialog } from '@angular/material';
 import { TreeNode, TREE_ACTIONS, TreeComponent } from 'angular-tree-component';
@@ -44,6 +44,8 @@ export class ProjectTreeComponent implements OnInit {
 
   private showDatasets: Boolean;
 
+  private config = { wheelPropagation:true };
+  
   nodes: ProjectStructure[];
   options = {
     animateExpand: false,
@@ -86,10 +88,6 @@ export class ProjectTreeComponent implements OnInit {
     }
   };
 
-  private scrollConfig = {
-    wheelPropagation: true,
-  };
-
   constructor(
     private httpService: HttpService,
     private dataAdapter: DataAdapterService,
@@ -98,10 +96,13 @@ export class ProjectTreeComponent implements OnInit {
     private editorControl: EditorControlService,
     private snackBarService: SnackBarService,
     private codeEditorService: EditorService,
-    @Inject(Angular2InjectionTokens.LOGGER) private log: ZLUX.ComponentLogger) {
+    @Inject(Angular2InjectionTokens.LOGGER) private log: ZLUX.ComponentLogger,
+    private detector: ChangeDetectorRef) {
 
+    setTimeout(()=> {this.detector.detach();}, 500);
     this.editorControl.projectNode.subscribe((nodes) => {
       this.nodes = nodes;
+      this.detector.detectChanges();
     });
 
     this.showDatasets = false;
@@ -123,6 +124,7 @@ export class ProjectTreeComponent implements OnInit {
             });
             this.editorControl.setProjectNode(this.nodes);
             this.editorControl.initProjectContext(projectName, this.nodes);
+            this.detector.detectChanges();
           });
       }
     });
@@ -130,9 +132,10 @@ export class ProjectTreeComponent implements OnInit {
     this.editorControl.openDirectory.subscribe(dirName => {
       //Note: This temporary hack is used to hide datasets using the original slower Editor structure.
       // Will be removed when Dataset functionality for Explorer gets better.
-        this.fileExplorer.showUss();
-        this.fileExplorer.updateDirectory(dirName);
-        this.showDatasets = false;
+      this.showDatasets = false;
+      this.detector.detectChanges();
+      this.fileExplorer.showUss();
+      this.fileExplorer.updateDirectory(dirName).then(()=>{this.detector.detectChanges()});
     });
 
     this.editorControl.openDataset.subscribe(dirName => {
@@ -140,9 +143,10 @@ export class ProjectTreeComponent implements OnInit {
         if (dirName[0] == '/') {
           //Note: This temporary hack is used to hide datasets using the original slower Editor structure.
           // Will be removed when Dataset functionality for Explorer gets better.
-            this.fileExplorer.showUss();
-            this.fileExplorer.updateDirectory(dirName);
-            this.showDatasets = false;
+          this.showDatasets = false;
+          this.detector.detectChanges();
+          this.fileExplorer.showUss();
+          this.fileExplorer.updateDirectory(dirName).then(()=>{this.detector.detectChanges()});
         } else { //Datasets
           //Note: This temporary hack is used to show datasets using the original slower Editor structure.
           // Will be removed when Dataset functionality for Explorer gets better.
@@ -155,6 +159,7 @@ export class ProjectTreeComponent implements OnInit {
               this.nodes = this.dataAdapter.convertDatasetList(response);
               this.editorControl.setProjectNode(this.nodes);
               this.editorControl.initProjectContext(dirName, this.nodes);
+              this.detector.detectChanges();
             }, e => {
               // TODO
             });
@@ -168,6 +173,7 @@ export class ProjectTreeComponent implements OnInit {
   }
   
   ngOnInit() {
+      this.detector.detectChanges();
   }
 
   onCopyClick($event: any){
@@ -177,6 +183,7 @@ export class ProjectTreeComponent implements OnInit {
   onDatasetSelect() {
     this.fileExplorer.hideExplorers();
     this.showDatasets = true;
+    this.detector.detectChanges();
   }
 
   onDeleteClick($event: any){
@@ -216,8 +223,10 @@ export class ProjectTreeComponent implements OnInit {
     // keeping the original dataset viewer.
     this.fileExplorer.hideExplorers();
     this.showDatasets = true;
+    this.detector.detectChanges();
     this.editorControl.projectName = $event;
     this.editorControl.openDataset.next($event);
+    this.detector.detectChanges();
   }
 
   onRenameClick($event: any) {
@@ -225,8 +234,9 @@ export class ProjectTreeComponent implements OnInit {
   }
 
   onUssSelect() {
-    this.fileExplorer.showUss();
     this.showDatasets = false;
+    this.fileExplorer.showUss();
+    this.detector.detectChanges();
   }
 
   openProject() {
@@ -238,6 +248,7 @@ export class ProjectTreeComponent implements OnInit {
       if (result) {
         this.editorControl.projectName = result.name;
         this.editorControl.openProject.next(result.name);
+        this.detector.detectChanges();
       }
     });
   }
@@ -253,6 +264,7 @@ export class ProjectTreeComponent implements OnInit {
         this.fileExplorer.showUss();
         this.editorControl.projectName = result;
         this.editorControl.openDirectory.next(result);
+        this.detector.detectChanges();
       }
     });
   }
@@ -275,12 +287,14 @@ export class ProjectTreeComponent implements OnInit {
       // TREE_ACTIONS.TOGGLE_ACTIVE(tree, node, $event);
       // TREE_ACTIONS.TOGGLE_SELECTED(tree, node, $event);
       // TREE_ACTIONS.FOCUS(tree, node, $event);
+      this.detector.detectChanges();
     }
   }
 
   treeUpdate($event: any) {
     this.editorControl.setProjectNode($event.treeModel.nodes);
     this.editorControl.initProjectContext('', $event.treeModel.nodes);
+    this.detector.detectChanges();
   }
 
   fetchNode(nodeName: string, nodes?: ProjectStructure[]): ProjectStructure {
@@ -299,7 +313,6 @@ export class ProjectTreeComponent implements OnInit {
   }
 
   nodeIcon(node: TreeNode) {
-    let iconName = '';
     if (node.hasChildren) {
       return 'folder';
     } else {
