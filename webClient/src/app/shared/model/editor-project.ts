@@ -23,6 +23,28 @@ export interface ProjectStructure {
     isDataset: boolean;
     datasetAttrs?: DatasetAttributes;
     encoding?: number;
+    datasetAttrs?: DatasetAttributes;
+}
+
+export interface DatasetAttributes {
+  csiEntryType: string,
+  name: string,
+  dsorg?: DatasetOrganization,
+  members?: Array<any>,
+  recfm?: RecordFormat,
+  volser?: string
+}
+
+export interface RecordFormat {
+  carriageControl: string;
+  isBlocked: boolean;
+  recordLength: string;
+}
+
+export interface DatasetOrganization {
+  maxRecordLen: number;
+  organization: string;
+  totalBlockSize: number;
 }
 
 export interface DatasetAttributes {
