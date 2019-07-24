@@ -21,7 +21,27 @@ export interface ProjectStructure {
     path?: string;
     fileName?: string;
     isDataset: boolean;
+    datasetAttrs?: DatasetAttributes;
     encoding?: number;
+}
+
+export interface DatasetAttributes {
+  volser: string;
+  recfm: RecordFormat;
+  dsorg: DatasetOrganization;
+}
+
+export interface RecordFormat {
+  carriageControl: string;
+  isBlocked: boolean;
+  recordLength: string;
+}
+
+export interface DatasetOrganization {
+  maxRecordLen: number;
+  organization: string;
+  totalBlockSize: number;
+  isPDSDir?: boolean;
 }
 
 /*
